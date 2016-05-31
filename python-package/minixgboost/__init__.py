@@ -2,6 +2,7 @@
 """XGBoost: eXtreme Gradient Boosting library.
 
 Contributors: https://github.com/dmlc/xgboost/blob/master/CONTRIBUTORS.md
+            & https://github.com/mxbi
 """
 
 from __future__ import absolute_import
