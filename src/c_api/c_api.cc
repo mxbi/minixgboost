@@ -391,7 +391,7 @@ int XGDMatrixSetFloatInfo(DMatrixHandle handle,
                           const float* info,
                           bst_ulong len) {
   API_BEGIN();
-  static_cast<DMatrix*>(handle)->info().SetInfo(field, info, kFloat32, len);
+  static_cast<DMatrix*>(handle)->info().SetInfo(field, info, kUInt32, len);
   API_END();
 }
 

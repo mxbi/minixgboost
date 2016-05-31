@@ -186,14 +186,14 @@ Did not expect the data types in fields """
     if feature_types is None:
         feature_types = [PANDAS_DTYPE_MAPPER[dtype.name] for dtype in data_dtypes]
 
-    data = data.values.astype('float')
+    data = data.values.astype('int8')
 
     return data, feature_names, feature_types
 
 
 def _maybe_pandas_label(label):
     """ Extract internal data from pd.DataFrame for DMatrix label """
-
+    print('Warning: MiniXGBoost may not work with dataframes - use ndarray instead')
     if isinstance(label, DataFrame):
         if len(label.columns) > 1:
             raise ValueError('DataFrame for label cannot have multiple columns')
@@ -202,7 +202,7 @@ def _maybe_pandas_label(label):
         if not all(dtype.name in PANDAS_DTYPE_MAPPER for dtype in label_dtypes):
             raise ValueError('DataFrame.dtypes for label must be int, float or bool')
         else:
-            label = label.values.astype('float')
+            label = label.values.astype('int8')
     # pd.Series can be passed to xgb as it is
 
     return label
@@ -280,31 +280,31 @@ class DMatrix(object):
         self.feature_names = feature_names
         self.feature_types = feature_types
 
-    def _init_from_csr(self, csr):
-        """
-        Initialize data from a CSR matrix.
-        """
-        if len(csr.indices) != len(csr.data):
-            raise ValueError('length mismatch: {} vs {}'.format(len(csr.indices), len(csr.data)))
-        self.handle = ctypes.c_void_p()
-        _check_call(_LIB.XGDMatrixCreateFromCSR(c_array(ctypes.c_ulong, csr.indptr),
-                                                c_array(ctypes.c_uint, csr.indices),
-                                                c_array(ctypes.c_float, csr.data),
-                                                len(csr.indptr), len(csr.data),
-                                                ctypes.byref(self.handle)))
+    # def _init_from_csr(self, csr):
+    #     """
+    #     Initialize data from a CSR matrix.
+    #     """
+    #     if len(csr.indices) != len(csr.data):
+    #         raise ValueError('length mismatch: {} vs {}'.format(len(csr.indices), len(csr.data)))
+    #     self.handle = ctypes.c_void_p()
+    #     _check_call(_LIB.XGDMatrixCreateFromCSR(c_array(ctypes.c_ulong, csr.indptr),
+    #                                             c_array(ctypes.c_uint, csr.indices),
+    #                                             c_array(ctypes.c_float, csr.data),
+    #                                             len(csr.indptr), len(csr.data),
+    #                                             ctypes.byref(self.handle)))
 
-    def _init_from_csc(self, csc):
-        """
-        Initialize data from a CSC matrix.
-        """
-        if len(csc.indices) != len(csc.data):
-            raise ValueError('length mismatch: {} vs {}'.format(len(csc.indices), len(csc.data)))
-        self.handle = ctypes.c_void_p()
-        _check_call(_LIB.XGDMatrixCreateFromCSC(c_array(ctypes.c_ulong, csc.indptr),
-                                                c_array(ctypes.c_uint, csc.indices),
-                                                c_array(ctypes.c_float, csc.data),
-                                                len(csc.indptr), len(csc.data),
-                                                ctypes.byref(self.handle)))
+    # def _init_from_csc(self, csc):
+    #     """
+    #     Initialize data from a CSC matrix.
+    #     """
+    #     if len(csc.indices) != len(csc.data):
+    #         raise ValueError('length mismatch: {} vs {}'.format(len(csc.indices), len(csc.data)))
+    #     self.handle = ctypes.c_void_p()
+    #     _check_call(_LIB.XGDMatrixCreateFromCSC(c_array(ctypes.c_ulong, csc.indptr),
+    #                                             c_array(ctypes.c_uint, csc.indices),
+    #                                             c_array(ctypes.c_float, csc.data),
+    #                                             len(csc.indptr), len(csc.data),
+    #                                             ctypes.byref(self.handle)))
 
     def _init_from_npy2d(self, mat, missing):
         """
@@ -312,7 +312,7 @@ class DMatrix(object):
         """
         if len(mat.shape) != 2:
             raise ValueError('Input numpy.ndarray must be 2 dimensional')
-        data = np.array(mat.reshape(mat.size), dtype=np.float32)
+        data = np.array(mat.reshape(mat.size), dtype=np.int8)
         self.handle = ctypes.c_void_p()
         missing = missing if missing is not None else np.nan
         _check_call(_LIB.XGDMatrixCreateFromMat(data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
@@ -342,7 +342,7 @@ class DMatrix(object):
                                                c_str(field),
                                                ctypes.byref(length),
                                                ctypes.byref(ret)))
-        return ctypes2numpy(ret, length.value, np.float32)
+        return ctypes2numpy(ret, length.value, np.int8)
 
     def get_uint_info(self, field):
         """Get unsigned integer property from the DMatrix.
@@ -363,7 +363,7 @@ class DMatrix(object):
                                               c_str(field),
                                               ctypes.byref(length),
                                               ctypes.byref(ret)))
-        return ctypes2numpy(ret, length.value, np.uint32)
+        return ctypes2numpy(ret, length.value, np.uint8)
 
     def set_float_info(self, field, data):
         """Set float type property into the DMatrix.
@@ -378,7 +378,7 @@ class DMatrix(object):
         """
         _check_call(_LIB.XGDMatrixSetFloatInfo(self.handle,
                                                c_str(field),
-                                               c_array(ctypes.c_float, data),
+                                               c_array(ctypes.c_int8, data),
                                                len(data)))
 
     def set_uint_info(self, field, data):
@@ -394,7 +394,7 @@ class DMatrix(object):
         """
         _check_call(_LIB.XGDMatrixSetUIntInfo(self.handle,
                                               c_str(field),
-                                              c_array(ctypes.c_uint, data),
+                                              c_array(ctypes.c_uint8, data),
                                               len(data)))
 
     def save_binary(self, fname, silent=True):
@@ -510,26 +510,26 @@ class DMatrix(object):
                                          ctypes.byref(ret)))
         return ret.value
 
-    def slice(self, rindex):
-        """Slice the DMatrix and return a new DMatrix that only contains `rindex`.
-
-        Parameters
-        ----------
-        rindex : list
-            List of indices to be selected.
-
-        Returns
-        -------
-        res : DMatrix
-            A new DMatrix containing only selected indices.
-        """
-        res = DMatrix(None, feature_names=self.feature_names)
-        res.handle = ctypes.c_void_p()
-        _check_call(_LIB.XGDMatrixSliceDMatrix(self.handle,
-                                               c_array(ctypes.c_int, rindex),
-                                               len(rindex),
-                                               ctypes.byref(res.handle)))
-        return res
+    # def slice(self, rindex):
+    #     """Slice the DMatrix and return a new DMatrix that only contains `rindex`.
+    #
+    #     Parameters
+    #     ----------
+    #     rindex : list
+    #         List of indices to be selected.
+    #
+    #     Returns
+    #     -------
+    #     res : DMatrix
+    #         A new DMatrix containing only selected indices.
+    #     """
+    #     res = DMatrix(None, feature_names=self.feature_names)
+    #     res.handle = ctypes.c_void_p()
+    #     _check_call(_LIB.XGDMatrixSliceDMatrix(self.handle,
+    #                                            c_array(ctypes.c_int, rindex),
+    #                                            len(rindex),
+    #                                            ctypes.byref(res.handle)))
+    #     return res
 
     @property
     def feature_names(self):

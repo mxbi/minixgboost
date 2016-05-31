@@ -104,6 +104,9 @@ inline bool MetaTryLoadFloatInfo(const std::string& fname,
     case kUInt64: {                                                     \
       const uint64_t* cast_ptr = reinterpret_cast<const uint64_t*>(old_ptr); proc; break; \
     }                                                                   \
+    case kUInt8: {                                                     \
+      const uint8_t* cast_ptr = reinterpret_cast<const uint8_t*>(old_ptr); proc; break; \
+    }                                                                   \
     default: LOG(FATAL) << "Unknown data type" << dtype;                \
   }                                                                     \
 

@@ -23,7 +23,8 @@ enum DataType {
   kFloat32 = 1,
   kDouble = 2,
   kUInt32 = 3,
-  kUInt64 = 4
+  kUInt64 = 4,
+  kUInt8 = 5
 };
 
 /*!
